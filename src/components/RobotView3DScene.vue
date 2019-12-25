@@ -1,5 +1,5 @@
 <template>
-    <div class="scene" id="container"/>
+    <div class="scene" ref="container"/>
 </template>
 
 <script>
@@ -17,7 +17,7 @@
         },
         methods: {
             init: function () {
-                let container = document.getElementById("container");
+                let container = this.$refs.container;
 
                 this.camera = new Three.PerspectiveCamera(70,
                     container.clientWidth / container.clientHeight, 0.01, 10);
