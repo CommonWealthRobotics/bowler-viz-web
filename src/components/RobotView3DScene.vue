@@ -58,7 +58,7 @@
 
     class robotLink {
 
-        constructor(scene, loader, uri, index) {
+        constructor(worldGroup, loader, uri, index) {
             // eslint-disable-next-line no-console
             console.log("display-links: New Link '" + uri + "': " + index + "");
 
@@ -66,7 +66,7 @@
             loader.load(uri, function (mesh) {
                 mesh.matrixAutoUpdate = false;
                 obj.mesh = mesh;
-                scene.add(mesh);
+                worldGroup.add(mesh);
 
                 // eslint-disable-next-line no-console
                 console.log("display-links: Object " + index + " loaded");
@@ -76,8 +76,8 @@
 
     class robot {
 
-        constructor(scene, loader, uri) {
-            this.scene = scene;
+        constructor(worldGroup, loader, uri) {
+            this.worldGroup = worldGroup;
             this.loader = loader;
             this.linkObjects = [];
 
@@ -101,7 +101,7 @@
                 console.log("display-links: Adding Link " + i);
 
                 // Pass URI and index to the constructor.
-                const robotlink = new robotLink(this.scene, this.loader,
+                const robotlink = new robotLink(this.worldGroup, this.loader,
                     "http://localhost:8000" + cad[i], i);
                 this.linkObjects.push(robotlink);
             }
@@ -129,7 +129,8 @@
                 robot: null,
                 wsHandle: null,
                 loader: null,
-                stats: null
+                stats: null,
+                worldGroup: null
             }
         },
         methods: {
@@ -152,18 +153,17 @@
                 this.scene = new Three.Scene();
                 this.scene.background = new Three.Color(0x777777);
 
-                const groundPlane = new Three.LineSegments(
-                    new Three.WireframeGeometry(
-                        new Three.PlaneGeometry(
-                            1000, 1000, 10, 10)),
-                    new Three.LineBasicMaterial({color: 0xffffff, linewidth: 2})
-                );
-                groundPlane.rotateX(1.570796);
-                this.scene.add(groundPlane);
+                this.worldGroup = new Three.Group();
+                this.worldGroup.rotateX(-Math.PI / 2);
+                this.scene.add(this.worldGroup);
 
-                this.createAxis(0xff0000, new Three.Vector3(1000, 0, 0));
-                this.createAxis(0x00ff00, new Three.Vector3(0, 1000, 0));
-                this.createAxis(0x0000ff, new Three.Vector3(0, 0, 1000));
+                const gridHelper = new Three.GridHelper(1000, 10);
+                gridHelper.rotateX(-Math.PI / 2);
+                this.worldGroup.add(gridHelper);
+
+                const axesHelper = new Three.AxesHelper(1000);
+                axesHelper.material.linewidth = 4;
+                this.worldGroup.add(axesHelper);
 
                 const ambientLight = new Three.AmbientLight(0x404040);
                 this.scene.add(ambientLight);
@@ -175,7 +175,7 @@
                 this.loader = new OBJLoader();
 
                 const jvmAddr = "localhost:8000";
-                this.robot = new robot(this.scene, this.loader,
+                this.robot = new robot(this.worldGroup, this.loader,
                     "http://" + jvmAddr + "/robots");
 
                 // const wsuri = ((window.location.protocol === "https:") ? "wss://" : "ws://") +
@@ -190,16 +190,6 @@
                 this.renderer.render(this.scene, this.camera);
                 this.stats.end();
                 requestAnimationFrame(this.animate);
-            },
-            createAxis: function (color, endPoint) {
-                const axisGeom = new Three.Geometry();
-                axisGeom.vertices.push(new Three.Vector3(0, 0, 0));
-                axisGeom.vertices.push(endPoint);
-                const axis = new Three.Line(
-                    axisGeom,
-                    new Three.LineBasicMaterial({color: color, linewidth: 2})
-                );
-                this.scene.add(axis);
             }
         },
         mounted() {
