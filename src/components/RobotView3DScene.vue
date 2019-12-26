@@ -182,14 +182,14 @@
                 this.renderer.render(this.scene, this.camera);
             },
             createAxis: function(color, endPoint) {
-                const xAxisGeom = new Three.Geometry();
-                xAxisGeom.vertices.push(new Three.Vector3(0, 0, 0));
-                xAxisGeom.vertices.push(endPoint);
-                const xAxis = new Three.Line(
-                    xAxisGeom,
+                const axisGeom = new Three.Geometry();
+                axisGeom.vertices.push(new Three.Vector3(0, 0, 0));
+                axisGeom.vertices.push(endPoint);
+                const axis = new Three.Line(
+                    axisGeom,
                     new Three.LineBasicMaterial({color: color, linewidth: 2})
                 );
-                this.scene.add(xAxis);
+                this.scene.add(axis);
             }
         },
         mounted() {
