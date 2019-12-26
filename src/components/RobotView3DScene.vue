@@ -145,8 +145,8 @@
                 this.$refs.stats.appendChild(this.stats.domElement);
 
                 this.camera = new Three.PerspectiveCamera(75,
-                    container.clientWidth / container.clientHeight, 0.01, 1000);
-                this.camera.position.set(0, 0, 200);
+                    container.clientWidth / container.clientHeight, 0.01, 10000);
+                this.camera.position.set(300, 300, -300);
 
                 this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
@@ -162,7 +162,7 @@
                 this.worldGroup.add(gridHelper);
 
                 const axesHelper = new Three.AxesHelper(1000);
-                axesHelper.material.linewidth = 4;
+                axesHelper.material.linewidth = 2;
                 this.worldGroup.add(axesHelper);
 
                 const ambientLight = new Three.AmbientLight(0x404040);
