@@ -8,10 +8,10 @@
     import {OBJLoader} from "three/examples/jsm/loaders/OBJLoader"
 
     class webSocketHandler {
-        ws = null;
 
-        constructor(wsuri) {
-            var obj = this;
+        constructor(robot, wsuri) {
+            const obj = this;
+            this.robot = robot;
             // eslint-disable-next-line no-console
             console.log(wsuri);
             this.ws = new WebSocket(wsuri);
@@ -21,140 +21,93 @@
             };
         }
 
-        // eslint-disable-next-line no-unused-vars
-        connect(wsconnect) {
-            // eslint-disable-next-line no-console
-            console.log("Websocket Open");
-        }
-
         handleData(e) {
-            // eslint-disable-next-line no-console
-            console.log("web-socket-handler: Got Data!" + e.data);
             // data is big endian
-            var dv = new DataView(e.data);
-            var command = dv.getUint32(0);
+            const dv = new DataView(e.data);
+            const command = dv.getUint32(0);
             switch (command) {
                 case 1:
                     // Position Update
                     this.positionUpdate(dv);
                     break;
-                case 2:
-                    // Dummy Command
-
-
-                    break;
             }
         }
 
         positionUpdate(dv) {
+            const rlink = dv.getUint32(4);
 
-            var transform = [];
-            var rlink = dv.getUint32(4);
-            for (var i = 0; i < 16; i++) {
-                transform.push(dv.getFloat32((i + 2) * 4));
-            }
-            var m = new Three.Matrix4();
-            m.elements = transform;
-            //debugger;
             if (this.robot.linkObjects[rlink] != null) {
+                const transform = [];
+                for (let i = 0; i < 16; i++) {
+                    transform.push(dv.getFloat32((i + 2) * 4));
+                }
 
-                this.robot.linkObjects[rlink].transform = m;
+                if (this.robot.linkObjects[rlink].transform == null) {
+                    this.robot.linkObjects[rlink].transform = new Three.Matrix4();
+                }
+
+                this.robot.linkObjects[rlink].transform.elements = transform;
                 this.robot.linkObjects[rlink].update = true;
-                // eslint-disable-next-line no-console
-                console.log("web-socket-handler: Position for link " + rlink + "! " + transform);
             }
-        }
-
-        // eslint-disable-next-line no-unused-vars
-        dummyCommand(dv) {
-            // eslint-disable-next-line no-console
-            console.log("Dummy Command!");
         }
     }
 
-    // robot object
     class robotLink {
-        scene = null;
-        loader = null;
 
         constructor(scene, loader, uri, index) {
-            this.scene = scene;
-            this.loader = loader;
-            var obj = this;
             // eslint-disable-next-line no-console
             console.log("display-links: New Link '" + uri + "': " + index + "");
-            // Load OBJ and register our selves as callback
-            this.loader.load(uri, function (j) {
-                obj.addToScene(j);
+
+            const obj = this;
+            loader.load(uri, function (mesh) {
+                mesh.matrixAutoUpdate = false;
+                obj.mesh = mesh;
+                scene.add(mesh);
+
+                // eslint-disable-next-line no-console
+                console.log("display-links: Object " + index + " loaded");
             });
-
-            this.index = index;
-        }
-
-        index = null;
-        sceneobject = null;
-        transform = null;
-        update = false;
-
-        addToScene(mesh) {
-            // eslint-disable-next-line no-console
-            console.log("display-links: Object " + this.index + " loaded");
-
-            //debugger;
-            //debugger;
-            // Set a material
-            //mesh.children[0].material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
-            this.sceneobject = mesh;
-            //debugger;
-            // Add ourselves to the global scene.
-            this.scene.add(mesh);
         }
     }
 
     class robot {
-        // an array of robotLinks for future reference.
-        linkObjects = [];
-        scene = null;
-        loader = null;
 
         constructor(scene, loader, uri) {
             this.scene = scene;
             this.loader = loader;
+            this.linkObjects = [];
+
             // eslint-disable-next-line no-console
             console.log("display-links: New Robot '" + uri + "'");
+
             //kick off async request for robots file.
             fetch(uri).then(it => it.json()).then(it => this.loadCad(it));
-            this.linkObjects = [];
         }
 
         loadCad(json) {
             // Request returned with valid JSON
-            var cad = json.robots[0].cad;
+            const cad = json.robots[0].cad;
+
             // eslint-disable-next-line no-console
             console.log("display-links: Loading " + cad.length + " CAD objects");
 
             // Iterate over create robotLink Objects
-            for (var i = 0; i < cad.length; i++) {
+            for (let i = 0; i < cad.length; i++) {
                 // eslint-disable-next-line no-console
                 console.log("display-links: Adding Link " + i);
-                // Pass URI and index to the constructor.
-                var robotlink = new robotLink(this.scene, this.loader, cad[i], i);
-                this.linkObjects.push(robotlink);
 
+                // Pass URI and index to the constructor.
+                const robotlink = new robotLink(this.scene, this.loader,
+                    "http://localhost:8000" + cad[i], i);
+                this.linkObjects.push(robotlink);
             }
         }
 
         applyTransforms() {
-            var lojb = this.linkObjects;
-
-            for (var i = 0; i < lojb.length; i++) {
-                var l = lojb[i];
-                if (l.transform != null && l.sceneobject != null && l.update) {
-                    // eslint-disable-next-line no-console
-                    console.log("display-links: Updating matrix");
-                    if (l.sceneobject.matrixAutoUpdate != false)
-                        l.sceneobject.matrixAutoUpdate = false;
-                    l.sceneobject.matrix = lojb[i].transform;
+            for (let i = 0; i < this.linkObjects.length; i++) {
+                const l = this.linkObjects[i];
+                if (l.transform != null && l.mesh != null && l.update) {
+                    l.mesh.matrix = this.linkObjects[i].transform;
                     l.update = false;
                 }
             }
@@ -178,7 +131,7 @@
             init: function () {
                 let container = this.$refs.container;
 
-                this.renderer = new Three.WebGLRenderer({antialias: true});
+                this.renderer = new Three.WebGLRenderer({antialias: false});
                 this.renderer.setSize(container.clientWidth, container.clientHeight);
                 container.appendChild(this.renderer.domElement);
 
@@ -194,12 +147,20 @@
                 let ambientLight = new Three.AmbientLight(0x404040);
                 this.scene.add(ambientLight);
 
+                let directionalLight = new Three.DirectionalLight(0xffffff, 5.0);
+                directionalLight.position.set(10, 10, 10);
+                this.scene.add(directionalLight);
+
                 this.loader = new OBJLoader();
 
-                this.robot = new robot(this.scene, this.loader, "/robots");
-                let wsuri = ((window.location.protocol === "https:") ? "wss://" : "ws://") +
-                    window.location.host + "/robot/socket/MyTestRobot";
-                this.wsHandle = new webSocketHandler(wsuri);
+                let jvmAddr = "localhost:8000";
+                this.robot = new robot(this.scene, this.loader,
+                    "http://" + jvmAddr + "/robots");
+
+                // let wsuri = ((window.location.protocol === "https:") ? "wss://" : "ws://") +
+                //     window.location.host + "/robot/socket/MyTestRobot";
+                this.wsHandle = new webSocketHandler(this.robot,
+                    "ws://" + jvmAddr + "/robot/socket/MyTestRobot");
             },
             animate: function () {
                 this.robot.applyTransforms();
@@ -214,7 +175,6 @@
         },
         destroyed() {
             this.renderer.forceContextLoss();
-            this.renderer.context = null;
             this.renderer.domElement = null;
             this.renderer = null;
         }
