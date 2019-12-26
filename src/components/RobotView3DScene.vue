@@ -1,11 +1,16 @@
 <template>
-    <div class="scene" ref="container"/>
+    <div class="scene">
+        <div class="scene" id="container" ref="container">
+            <div id="stats" ref="stats"/>
+        </div>
+    </div>
 </template>
 
 <script>
     import * as Three from "three";
     import {OrbitControls} from "three/examples/jsm/controls/OrbitControls"
     import {OBJLoader} from "three/examples/jsm/loaders/OBJLoader"
+    import Stats from "stats.js"
 
     class webSocketHandler {
 
@@ -124,7 +129,8 @@
                 renderer: null,
                 robot: null,
                 wsHandle: null,
-                loader: null
+                loader: null,
+                stats: null
             }
         },
         methods: {
@@ -134,6 +140,9 @@
                 this.renderer = new Three.WebGLRenderer({antialias: false});
                 this.renderer.setSize(container.clientWidth, container.clientHeight);
                 container.appendChild(this.renderer.domElement);
+
+                this.stats = new Stats();
+                this.$refs.stats.appendChild(this.stats.domElement);
 
                 this.camera = new Three.PerspectiveCamera(75,
                     container.clientWidth / container.clientHeight, 0.01, 1000);
@@ -176,12 +185,14 @@
                     "ws://" + jvmAddr + "/robot/socket/MyTestRobot");
             },
             animate: function () {
+                this.stats.begin();
                 this.robot.applyTransforms();
-                requestAnimationFrame(this.animate);
                 this.controls.update();
                 this.renderer.render(this.scene, this.camera);
+                this.stats.end();
+                requestAnimationFrame(this.animate);
             },
-            createAxis: function(color, endPoint) {
+            createAxis: function (color, endPoint) {
                 const axisGeom = new Three.Geometry();
                 axisGeom.vertices.push(new Three.Vector3(0, 0, 0));
                 axisGeom.vertices.push(endPoint);
@@ -207,5 +218,15 @@
     .scene {
         width: 100%;
         height: 100%;
+    }
+
+    #container {
+        position: relative;
+    }
+
+    #stats {
+        position: absolute;
+        top: 0;
+        left: 0;
     }
 </style>
