@@ -129,7 +129,7 @@
         },
         methods: {
             init: function () {
-                let container = this.$refs.container;
+                const container = this.$refs.container;
 
                 this.renderer = new Three.WebGLRenderer({antialias: false});
                 this.renderer.setSize(container.clientWidth, container.clientHeight);
@@ -144,20 +144,33 @@
                 this.scene = new Three.Scene();
                 this.scene.background = new Three.Color(0x777777);
 
-                let ambientLight = new Three.AmbientLight(0x404040);
+                const groundPlane = new Three.LineSegments(
+                    new Three.WireframeGeometry(
+                        new Three.PlaneGeometry(
+                            1000, 1000, 10, 10)),
+                    new Three.LineBasicMaterial({color: 0xffffff, linewidth: 2})
+                );
+                groundPlane.rotateX(1.570796);
+                this.scene.add(groundPlane);
+
+                this.createAxis(0xff0000, new Three.Vector3(1000, 0, 0));
+                this.createAxis(0x00ff00, new Three.Vector3(0, 1000, 0));
+                this.createAxis(0x0000ff, new Three.Vector3(0, 0, 1000));
+
+                const ambientLight = new Three.AmbientLight(0x404040);
                 this.scene.add(ambientLight);
 
-                let directionalLight = new Three.DirectionalLight(0xffffff, 5.0);
+                const directionalLight = new Three.DirectionalLight(0xffffff, 5.0);
                 directionalLight.position.set(10, 10, 10);
                 this.scene.add(directionalLight);
 
                 this.loader = new OBJLoader();
 
-                let jvmAddr = "localhost:8000";
+                const jvmAddr = "localhost:8000";
                 this.robot = new robot(this.scene, this.loader,
                     "http://" + jvmAddr + "/robots");
 
-                // let wsuri = ((window.location.protocol === "https:") ? "wss://" : "ws://") +
+                // const wsuri = ((window.location.protocol === "https:") ? "wss://" : "ws://") +
                 //     window.location.host + "/robot/socket/MyTestRobot";
                 this.wsHandle = new webSocketHandler(this.robot,
                     "ws://" + jvmAddr + "/robot/socket/MyTestRobot");
@@ -167,6 +180,16 @@
                 requestAnimationFrame(this.animate);
                 this.controls.update();
                 this.renderer.render(this.scene, this.camera);
+            },
+            createAxis: function(color, endPoint) {
+                const xAxisGeom = new Three.Geometry();
+                xAxisGeom.vertices.push(new Three.Vector3(0, 0, 0));
+                xAxisGeom.vertices.push(endPoint);
+                const xAxis = new Three.Line(
+                    xAxisGeom,
+                    new Three.LineBasicMaterial({color: color, linewidth: 2})
+                );
+                this.scene.add(xAxis);
             }
         },
         mounted() {
@@ -176,7 +199,6 @@
         destroyed() {
             this.renderer.forceContextLoss();
             this.renderer.domElement = null;
-            this.renderer = null;
         }
     }
 </script>
