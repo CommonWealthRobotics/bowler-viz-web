@@ -40,19 +40,18 @@
 
         positionUpdate(dv) {
             const rlink = dv.getUint32(4);
+            const link = this.robot.linkObjects[rlink];
 
-            if (this.robot.linkObjects[rlink] != null) {
-                const transform = [];
+            if (link != null) {
+                if (link.transform == null) {
+                    link.transform = new Three.Matrix4();
+                }
+
                 for (let i = 0; i < 16; i++) {
-                    transform.push(dv.getFloat32((i + 2) * 4));
+                    link.transform.elements[i] = dv.getFloat32((i + 2) * 4);
                 }
 
-                if (this.robot.linkObjects[rlink].transform == null) {
-                    this.robot.linkObjects[rlink].transform = new Three.Matrix4();
-                }
-
-                this.robot.linkObjects[rlink].transform.elements = transform;
-                this.robot.linkObjects[rlink].update = true;
+                link.update = true;
             }
         }
     }
